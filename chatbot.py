@@ -11,7 +11,6 @@ import time
 class MyState(MessagesState):
     subtasks: List[str]
 
-
 # Load env
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -26,16 +25,20 @@ llm = ChatGoogleGenerativeAI(
 def booking_agent(task): return f"📌 Booking venue: {task}"
 def communication_agent(task): return f"✉️ Sending emails: {task}"
 def design_agent(task): return f"🎨 Designing: {task}"
-def logistics_agent(task): return f"🚚 Logistics: {task}"
 def outreach_agent(task): return f"📣 Outreach: {task}"
+def calendar_agent(task): return f"📅 Scheduling: {task}"
+def research_agent(task): return f"🔍 Researching: {task}"
+def generic_agent(task): return f"⚡ Generic agent handled: {task}"
 
+# generate subtasks from LLM
 def generate_subtask_list(state: MyState):
     query = state["messages"][-1].content
     
     subtask_prompt = f"""
-    You are a subtask generator.
+    You are a subtask generator. 
 
-    Available agents: booking, communication, design, logistics, outreach.
+    Available agents: booking, communication, design, outreach, calendar, research, generic.
+    It is not compulsory to generate subtasks for all agents, but it is mandatory to include at least 3-4 distinct agents.
 
     Return ONLY a valid JSON array of objects in this exact format:
     [
@@ -65,7 +68,6 @@ def generate_subtask_list(state: MyState):
 
     return {"subtasks": subtasks}
 
-
 # Subtask router consumes subtasks
 from langchain_core.messages import AIMessage
 
@@ -85,10 +87,18 @@ def subtask_router(state: MyState):
             agent_output = logistics_agent(task)
         elif agent == "outreach":
             agent_output = outreach_agent(task)
+        elif agent == "calendar":
+            agent_output = calendar_agent(task)
+        elif agent == "research":
+            agent_output = research_agent(task)
         else:
             agent_output = f"⚡ Generic agent handled: {task}"
 
+        results.append(AIMessage(f"Calling {agent} agent..."))
         results.append(AIMessage(content=agent_output))
+        results.append(AIMessage(f"✅ {agent} agent completed task: {task}"))
+    
+    results.append(AIMessage("All subtasks completed!"))
 
     return {"messages": results}
 
@@ -120,18 +130,20 @@ for msg in st.session_state.messages:
 
 # User input
 if prompt := st.chat_input("Type your message..."):
+    # Display user message in UI
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.chat_memory.append({"role": "user", "content": prompt})
 
-    # Run through LangGraph
-    response_state = app.invoke({"messages": st.session_state.chat_memory})
+    # --- Run LangGraph on ONLY the new query ---
+    fresh_state = {"messages": [{"role": "user", "content": prompt}]}  # fresh state
+    response_state = app.invoke(fresh_state)
 
+    # remove user query from response
+    response_state["messages"] = response_state["messages"][1:]
+
+    # Loop over messages returned for this query
     for msg in response_state["messages"]:
         st.chat_message("assistant").markdown(msg.content)
         st.session_state.messages.append({"role": "assistant", "content": msg.content})
-        st.session_state.chat_memory.append({"role": "assistant", "content": msg.content})
-
-        # add a 1 second delay for each message 
         time.sleep(1)
 
