@@ -83,8 +83,6 @@ def subtask_router(state: MyState):
             agent_output = communication_agent(task)
         elif agent == "design":
             agent_output = design_agent(task)
-        elif agent == "logistics":
-            agent_output = logistics_agent(task)
         elif agent == "outreach":
             agent_output = outreach_agent(task)
         elif agent == "calendar":
