@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, MessagesState, START, END
-from typing import List, TypedDict
+from langchain_core.messages import AIMessage
+from typing import List
 import json
 import time
 
@@ -68,8 +69,26 @@ def generate_subtask_list(state: MyState):
 
     return {"subtasks": subtasks}
 
+def show_subtasks(state: MyState):
+    subtasks = state["subtasks"]
+    if not subtasks:
+        return {"messages": [AIMessage(content="No subtasks generated.")]}
+
+    subtask_list = "\n".join(
+        [f"- **{s['agent']}** → {s['task']}" for s in subtasks]
+    )
+
+    return {
+        "messages": [
+            AIMessage(
+                content=f"Here are the subtasks I’ll work on:\n\n{subtask_list}\n\n🚀 Let’s begin!"
+            )
+        ]
+    }
+
+
+
 # Subtask router consumes subtasks
-from langchain_core.messages import AIMessage
 
 def subtask_router(state: MyState):
     results = []
@@ -105,16 +124,19 @@ def subtask_router(state: MyState):
 graph = StateGraph(MyState)   # ✅ use custom state
 graph.add_node("subtask_generator", generate_subtask_list)
 graph.add_node("subtask_router", subtask_router)
+graph.add_node("show_subtasks", show_subtasks)
 
 graph.add_edge(START, "subtask_generator")
+graph.add_edge("subtask_generator", "show_subtasks" )
 graph.add_edge("subtask_generator", "subtask_router")
 graph.add_edge("subtask_router", END)
 
 app = graph.compile()
 
 # Streamlit UI
-st.set_page_config(page_title="LangGraph + Gemini", page_icon="🤖")
-st.title("🤖 LangGraph Gemini Chatbot")
+st.set_page_config(page_title="Agentic Chatbot", page_icon="🤖")
+st.title("🤖 Agentic Chatbot")
+st.subheader("Your task -> Subtasks -> Agents -> Execution")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -127,7 +149,7 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
 
 # User input
-if prompt := st.chat_input("Type your message..."):
+if prompt := st.chat_input("Enter your task..."):
     # Display user message in UI
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
