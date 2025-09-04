@@ -3,7 +3,7 @@
 ### 🚀 Introduction  
 **Agentic Chatbot** is a proof-of-concept chatbot that simulates *agentic behavior*. Given a complex user query, it automatically breaks it down into smaller subtasks and routes them to relevant (mock) agents. Each agent logs its progress in the chat, mimicking a multi-agent workflow.  
 
-🔗 **Live Demo:** [Agentic Chatbot on Streamlit](https://subtask-mock-agent.streamlit.app)  
+🔗 **Live Demo:** [Agentic Chatbot on Streamlit](https://mock-agentic-chatbot.streamlit.app)  
 
 ---
 
